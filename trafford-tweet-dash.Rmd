@@ -1,0 +1,307 @@
+---
+title: "tweet-dash"
+runtime: shiny
+output: 
+  flexdashboard::flex_dashboard:
+    theme: readable
+    orientation: rows
+    logo: logo.png
+    css: styles.css
+---
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.10.1/css/all.css" crossorigin="anonymous">
+
+```{r setup, include=FALSE}
+library(shiny) ; library(flexdashboard) ; library(tidyverse) ; library(rtweet) ; library(tidytext) ; library(reshape2) ; library(igraph) ; library(grid) ; library(ggraph) ; library(lubridate) ; library(DT) ; library(htmltools) ; library(scales) ; library(emo) ; library(knitr) ; library(kableExtra) ; library(shinycssloaders) ; library(wordcloud2)
+
+twitter_token <- readRDS("twitter_token.rds")
+```
+
+``````{r reactive}
+tweets <- eventReactive(input$submit,{
+    if(is.null(input$query)){
+      return()
+    }
+    
+    search_tweets(q = input$query, 
+                  n = 250,
+                  include_rts = FALSE,
+                  `-filter` = "replies",
+                  lang = "en")
+  })
+
+words <- reactive({
+  tweets() %>%
+    mutate(text = str_remove_all(text, "&amp;|&lt;|&gt;"),
+           text = str_remove_all(text, "\\s?(f|ht)(tp)(s?)(://)([^\\.]*)[\\.|/](\\S*)"),
+           text = str_remove_all(text, "[^\x01-\x7F]")) %>% 
+    unnest_tokens(word, text, token = "tweets") %>%
+    filter(!word %in% stop_words$word,
+           !word %in% str_remove_all(stop_words$word, "'"),
+           str_detect(word, "[a-z]"),
+           !str_detect(word, "^#"),
+           !str_detect(word, "@\\S+")) %>% 
+    select(word)
+})
+
+message <- reactive({
+  HTML(paste0("<strong>", nrow(tweets()), " </strong> tweets (excluding retweets and replies) were retrieved between ", strftime(min(tweets()$created_at), '%R on %A %d %B %Y', tz = 'GMT'), " and ", strftime(max(tweets()$created_at), '%R on %A %d %B %Y', tz = 'GMT'), "."))
+})
+```
+
+Sidebar {.sidebar}
+=====================================
+
+```{r}
+radioButtons("query", label = h5("Choose a topic:"),
+                c("Trafford Council" = "@TraffordCouncil OR \"Trafford Council\"",
+                  "OneTrafford" = "@OneTrafford OR \"One Trafford\"",
+                  "#ClimateEmergency"))
+actionButton("submit", "Submit query", 
+    style = "color: #fff; background-color: #969696; border-color: #737373")
+```
+
+<br />
+
+```{r, period}
+withSpinner(uiOutput("message"))
+
+output$message <- renderUI({
+  message()
+})
+```
+
+Tweets {data-icon="fab fa-twitter"}
+=======================================================================
+
+```{r table}
+DTOutput("table")
+
+mention_url <- function(x) {
+  x %>%
+    stringr::str_split(" ") %>%
+    purrr::flatten_chr() %>%
+    str_c("<a href='https://twitter.com/", ., "' target='_blank'>@", ., "</a>") %>%
+    stringr::str_c(collapse = " ")
+}
+
+hashtag_url <- function(x) {
+  x %>%
+    stringr::str_split(" ") %>%
+    purrr::flatten_chr() %>%
+    str_c("<a href='https://twitter.com/search?q=%23", ., "' target='_blank'>#", ., "</a>") %>%
+    stringr::str_c(collapse = " ")
+}
+
+output$table <- renderDT({
+    tweets() %>%
+    select(created_at, screen_name, text, hashtags, mentions_screen_name, urls_expanded_url, urls_t.co, retweet_count, favorite_count) %>% 
+      mutate(created_at = strftime(created_at, '%F %T', tz = 'GMT'),
+             screen_name = paste0("<a href='https://twitter.com/", screen_name, "' target='_blank'>@", screen_name, "</a>"),
+             hashtags = ifelse(
+               !is.na(hashtags),
+               map_chr(hashtags, hashtag_url),
+               ""),
+             mentions_screen_name = ifelse(
+               !is.na(mentions_screen_name),
+               map_chr(mentions_screen_name, mention_url),
+               ""),
+             urls_expanded_url = ifelse(is.na(urls_expanded_url), "", paste0("<a href='", urls_expanded_url, "'target='_blank'>", urls_t.co, "</a>"))) %>%
+    select(-urls_t.co) %>% 
+      datatable(
+        fillContainer = TRUE,
+        width = "100%", 
+        rownames = FALSE, 
+        escape = FALSE,
+        options = list(
+          scrollX = TRUE, 
+          autoWidth = TRUE,
+          columnDefs = list(
+            list(className = 'dt-left', targets = "_all"))
+          ), 
+        colnames = c("Timestamp", "Handle", "Tweet", "Hashtags", "Mentions", "URL", "RTs", "Likes")
+      )
+  })
+```
+
+Charts {data-icon="fas fa-chart-bar"}
+=======================================================================
+
+Row
+-----------------------------------------------------------------------
+
+### Timeline of activity
+```{r}
+plotOutput("timeline")
+
+output$timeline <- renderPlot({
+  ts_plot(tweets(), "hours") +
+    geom_hline(yintercept = 0, size = 1, colour = "#333333") +
+    geom_line(colour = "#1380A1", size = 1) +
+    scale_y_continuous(expand = c(0.005, 0.005)) +
+    labs(x = NULL, y = NULL, title = NULL, subtitle = NULL,
+         caption = "Data collected from Twitter's REST API via rtweet") +
+    theme_minimal(base_size = 16) +
+    theme(plot.margin = unit(rep(0.5, 4), "cm"),
+          panel.grid.major.x = element_blank(),
+          panel.grid.minor = element_blank(),
+          plot.caption = element_text(margin = margin(t = 15)))
+})
+```
+
+### Top tweeters
+```{r}
+plotOutput("tweeters")
+
+output$tweeters <- renderPlot({
+  tweets() %>% 
+    count(screen_name, sort = TRUE) %>%
+    filter(n > 1) %>% 
+    top_n(10) %>%
+    mutate(screen_name = paste0("@", screen_name)) %>% 
+    ggplot(aes(fct_reorder(screen_name, n, .desc = TRUE), n)) +
+    geom_col(fill = "#F3A641") +
+    geom_text(aes(label = n), hjust = 1.5, vjust = 0.5, colour = "white", fontface = "bold") +
+    geom_hline(yintercept = 0, size = 1, colour = "#333333") +
+    scale_y_continuous(expand = c(0.005, 0.005)) +
+    labs(x = NULL, y = NULL, title = NULL, subtitle = NULL,
+         caption = "Data collected from Twitter's REST API via rtweet") +
+    coord_flip() +
+    guides(fill = FALSE) +
+    theme_minimal(base_size = 16) +
+    theme(plot.margin = unit(rep(0.5, 4), "cm"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          plot.caption = element_text(margin = margin(t = 15)),
+          axis.text.x = element_blank())
+})
+```
+
+Row
+-----------------------------------------------------------------------
+
+### Most used hashtags
+```{r}
+plotOutput("hashtags")
+
+output$hashtags <- renderPlot({
+  tweets() %>% 
+    unnest_tokens(hashtag, text, "tweets", to_lower = FALSE) %>%
+    filter(str_detect(hashtag, "^#")) %>%
+    count(hashtag, sort = TRUE) %>%
+    filter(n > 1) %>% 
+    top_n(10) %>% 
+    mutate(hashtag = factor(hashtag, levels = hashtag)) %>% 
+    ggplot(aes(reorder(hashtag, n), n)) +
+    geom_segment(aes(x = hashtag, xend = hashtag, y = 0, yend = n), 
+                 linetype = "dotted", colour = "#212121", size = 0.5) +
+    geom_point(colour = "#8B8F50", size = 10) +
+    geom_text(aes(label = comma(n, accuracy = 1)), fontface = "bold", colour = "white") +
+    labs(x = NULL, y = NULL, title = NULL, subtitle = NULL,
+         caption = "Data collected from Twitter's REST API via rtweet") +
+    coord_flip() +
+    theme_minimal(base_size = 16) +
+    theme(plot.margin = unit(rep(0.5, 4), "cm"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          axis.text.x = element_blank(),
+          axis.text.y = element_text(hjust = 0))
+})
+```
+
+### Most used emoji
+```{r}
+htmlOutput("emoji")
+
+output$emoji <- renderText({
+  tweets() %>%
+    mutate(emoji = ji_extract_all(text)) %>%
+    unnest(cols = c(emoji)) %>%
+    count(emoji, sort = TRUE) %>%
+    top_n(5) %>% 
+    kable(col.names = NULL) %>%
+    kable_styling(
+      font_size = 20,
+      bootstrap_options = c("hover"), position = "left") 
+})
+```
+
+Analysis {data-icon="fas fa-brain"}
+=======================================================================
+
+Row
+-----------------------------------------------------------------------
+
+### Most common positive and negative words
+```{r}
+plotOutput("sentiment")
+
+output$sentiment <- renderPlot({
+  words() %>% 
+    inner_join(get_sentiments("bing")) %>%
+    mutate(sentiment = str_to_title(sentiment)) %>% 
+    count(word, sentiment, sort = TRUE) %>%
+    ungroup() %>% 
+    group_by(sentiment) %>%
+    filter(n > 1) %>% 
+    top_n(10) %>%
+    ggplot(aes(reorder(word, n), n, fill = sentiment)) +
+    geom_col(show.legend = FALSE) +
+    geom_text(aes(label = n), hjust = 1.5, vjust = 0.5, colour = "white", fontface = "bold") +
+    scale_fill_manual(values = c("firebrick1", "cornflowerblue")) +
+    labs(x = NULL, y = NULL, title = NULL, subtitle = NULL,
+         caption = "Data collected from Twitter's REST API via rtweet") +
+    facet_wrap(~sentiment, scales = "free_y") +
+    coord_flip() +
+    theme_minimal(base_size = 16) +
+    theme(plot.margin = unit(rep(0.5, 4), "cm"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          plot.caption = element_text(margin = margin(t = 15)),
+          strip.text = element_text(face = "bold", hjust = 0.1),
+          axis.text.x = element_blank())
+}) 
+```
+
+Row
+-----------------------------------------------------------------------
+
+### Most commonly associated words
+```{r}
+plotOutput("network")
+
+output$network <- renderPlot({
+  bigram_graph <- tweets() %>%
+    mutate(text = str_remove_all(text, "&amp;|&lt;|&gt;"),
+           text = str_remove_all(text, "\\s?(f|ht)(tp)(s?)(://)([^\\.]*)[\\.|/](\\S*)"),
+           text = str_remove_all(text, "[^\x01-\x7F]")) %>%
+    unnest_tokens(word, text, token = "tweets") %>%
+    filter(!word %in% stop_words$word,
+           !word %in% str_remove_all(stop_words$word, "'"),
+           str_detect(word, "[a-z]"),
+           !str_detect(word, "#\\S+"), 
+           !str_detect(word, "@\\S+")) %>%
+    select(word) %>%
+    unnest_tokens(bigram, word, token = "ngrams", n = 2) %>%
+    separate(bigram, c("word1", "word2"), sep = " ") %>%
+    count(word1, word2, sort = TRUE) %>%
+    select(word1, word2, n) %>%
+    filter(n > 2) %>% 
+    graph_from_data_frame()
+  
+  ggraph(bigram_graph, layout = "fr") +
+    geom_edge_link() +
+    geom_node_point() +
+    geom_node_text(aes(label = name), vjust = 1, hjust = 1) +
+    labs(x = NULL, y = NULL, title = NULL, subtitle = NULL,
+         caption = "Data collected from Twitter's REST API via rtweet") +
+    theme_void(base_size = 16) +
+    theme(plot.margin = unit(rep(0.5, 4), "cm"),
+          plot.caption = element_text(margin = margin(t = 15)))
+}) 
+```
+
+About {data-icon="fa-info-circle"}
+=====================================
+
+This dashboard was built by [Trafford Data Lab](https://www.trafforddatalab.io/) using the [rtweet](https://cran.r-project.org/web/packages/rtweet) [R](https://www.r-project.org/) package to retrieve tweets and [tidytext](https://cran.r-project.org/web/packages/tidytext) to tokenise them for analysis.   
