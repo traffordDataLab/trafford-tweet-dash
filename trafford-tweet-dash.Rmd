@@ -1,5 +1,5 @@
 ---
-title: "tweet-dash"
+title: "trafford-tweet-dash"
 runtime: shiny
 output: 
   flexdashboard::flex_dashboard:
@@ -12,7 +12,7 @@ output:
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.10.1/css/all.css" crossorigin="anonymous">
 
 ```{r setup, include=FALSE}
-library(shiny) ; library(flexdashboard) ; library(tidyverse) ; library(rtweet) ; library(tidytext) ; library(reshape2) ; library(igraph) ; library(grid) ; library(ggraph) ; library(lubridate) ; library(DT) ; library(htmltools) ; library(scales) ; library(emo) ; library(knitr) ; library(kableExtra) ; library(shinycssloaders) ; library(wordcloud2)
+library(shiny) ; library(flexdashboard) ; library(tidyverse) ; library(rtweet) ; library(tidytext) ; library(reshape2) ; library(igraph) ; library(grid) ; library(ggraph) ; library(lubridate) ; library(DT) ; library(htmltools) ; library(scales) ; library(emo) ; library(knitr) ; library(kableExtra) ; library(shinycssloaders) 
 
 twitter_token <- readRDS("twitter_token.rds")
 ```
@@ -27,7 +27,8 @@ tweets <- eventReactive(input$submit,{
                   n = 250,
                   include_rts = FALSE,
                   `-filter` = "replies",
-                  lang = "en")
+                  lang = "en",
+                  token = twitter_token)
   })
 
 words <- reactive({
@@ -137,7 +138,7 @@ plotOutput("timeline")
 output$timeline <- renderPlot({
   ts_plot(tweets(), "hours") +
     geom_hline(yintercept = 0, size = 1, colour = "#333333") +
-    geom_line(colour = "#1380A1", size = 1) +
+    geom_line(colour = "#2C5E80", size = 1) +
     scale_y_continuous(expand = c(0.005, 0.005)) +
     labs(x = NULL, y = NULL, title = NULL, subtitle = NULL,
          caption = "Data collected from Twitter's REST API via rtweet") +
@@ -160,7 +161,7 @@ output$tweeters <- renderPlot({
     top_n(10) %>%
     mutate(screen_name = paste0("@", screen_name)) %>% 
     ggplot(aes(fct_reorder(screen_name, n, .desc = TRUE), n)) +
-    geom_col(fill = "#F3A641") +
+    geom_col(fill = "#8B8F50") +
     geom_text(aes(label = n), hjust = 1.5, vjust = 0.5, colour = "white", fontface = "bold") +
     geom_hline(yintercept = 0, size = 1, colour = "#333333") +
     scale_y_continuous(expand = c(0.005, 0.005)) +
@@ -195,7 +196,7 @@ output$hashtags <- renderPlot({
     ggplot(aes(reorder(hashtag, n), n)) +
     geom_segment(aes(x = hashtag, xend = hashtag, y = 0, yend = n), 
                  linetype = "dotted", colour = "#212121", size = 0.5) +
-    geom_point(colour = "#8B8F50", size = 10) +
+    geom_point(colour = "#761B0C", size = 10) +
     geom_text(aes(label = comma(n, accuracy = 1)), fontface = "bold", colour = "white") +
     labs(x = NULL, y = NULL, title = NULL, subtitle = NULL,
          caption = "Data collected from Twitter's REST API via rtweet") +
@@ -248,7 +249,7 @@ output$sentiment <- renderPlot({
     ggplot(aes(reorder(word, n), n, fill = sentiment)) +
     geom_col(show.legend = FALSE) +
     geom_text(aes(label = n), hjust = 1.5, vjust = 0.5, colour = "white", fontface = "bold") +
-    scale_fill_manual(values = c("firebrick1", "cornflowerblue")) +
+    scale_fill_manual(values = c("#767676", "#F3A641")) +
     labs(x = NULL, y = NULL, title = NULL, subtitle = NULL,
          caption = "Data collected from Twitter's REST API via rtweet") +
     facet_wrap(~sentiment, scales = "free_y") +
