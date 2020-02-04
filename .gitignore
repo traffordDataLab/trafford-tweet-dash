@@ -2,7 +2,7 @@
 .DS_Store
 
 # Twitter
-.twitter_token.rds
+twitter_token.rds
 
 # History files
 .Rhistory
