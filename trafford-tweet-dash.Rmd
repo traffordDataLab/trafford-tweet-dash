@@ -161,7 +161,7 @@ output$tweeters <- renderPlot({
     top_n(10) %>%
     mutate(screen_name = paste0("@", screen_name)) %>% 
     ggplot(aes(fct_reorder(screen_name, n, .desc = TRUE), n)) +
-    geom_col(fill = "#8B8F50") +
+    geom_col(fill = "#2C5E80") +
     geom_text(aes(label = n), hjust = 1.5, vjust = 0.5, colour = "white", fontface = "bold") +
     geom_hline(yintercept = 0, size = 1, colour = "#333333") +
     scale_y_continuous(expand = c(0.005, 0.005)) +
@@ -196,7 +196,7 @@ output$hashtags <- renderPlot({
     ggplot(aes(reorder(hashtag, n), n)) +
     geom_segment(aes(x = hashtag, xend = hashtag, y = 0, yend = n), 
                  linetype = "dotted", colour = "#212121", size = 0.5) +
-    geom_point(colour = "#761B0C", size = 10) +
+    geom_point(colour = "#2C5E80", size = 10) +
     geom_text(aes(label = comma(n, accuracy = 1)), fontface = "bold", colour = "white") +
     labs(x = NULL, y = NULL, title = NULL, subtitle = NULL,
          caption = "Data collected from Twitter's REST API via rtweet") +
