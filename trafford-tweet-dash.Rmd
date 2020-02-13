@@ -115,6 +115,8 @@ output$table <- renderDT({
         rownames = FALSE, 
         escape = FALSE,
         options = list(
+          search = list(regex = TRUE),
+          searchHighlight = TRUE,
           scrollX = TRUE, 
           autoWidth = TRUE,
           columnDefs = list(
