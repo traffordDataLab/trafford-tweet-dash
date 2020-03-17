@@ -6,10 +6,10 @@ The following search terms are used for each query:
 
 - Trafford Council: "@TraffordCouncil OR 'Trafford Council'"   
 - OneTrafford: "@OneTrafford OR 'One Trafford'"      
-- #Climate Emergency: "#ClimateEmergency"   
-- COVID-19: "Trafford AND #coronavirus OR #COVID19 OR #COVIDー19 OR #CoronavirusOutbreak"    
+- #ClimateEmergency: "#ClimateEmergency"   
+- COVID-19: "Trafford AND coronavirus OR #coronavirus OR #CoronavirusOutbreak OR COVID19 OR COVID-19 OR #COVID19 OR #COVIDー19 OR #Corvid19uk"       
 
 Tweets published by @TraffordCouncil, @TraffLibraries, @TPAction, or @OneTrafford are excluded from the results.
 
 **Credits**    
-This dashboard was built by the [Trafford Data Lab](https://www.trafforddatalab.io/) using the [rtweet](https://cran.r-project.org/web/packages/rtweet) [R](https://www.r-project.org/) package to retrieve tweets and [tidytext](https://cran.r-project.org/web/packages/tidytext) to tokenise them for analysis.   
+This application was built by the [Trafford Data Lab](https://www.trafforddatalab.io/) using the [rtweet](https://cran.r-project.org/web/packages/rtweet) [R](https://www.r-project.org/) package to retrieve tweets and [tidytext](https://cran.r-project.org/web/packages/tidytext) to tokenise them for analysis.   

@@ -58,8 +58,8 @@ Sidebar {.sidebar}
 radioButtons("query", label = h5("Choose a topic:"),
                 c("Trafford Council" = "@TraffordCouncil OR \"Trafford Council\"",
                   "OneTrafford" = "@OneTrafford OR \"One Trafford\"",
-                  "#ClimateEmergency",
-                  "COVID-19" = "Trafford AND #coronavirus OR #COVID19 OR #COVIDー19 OR #CoronavirusOutbreak"))
+                  "#ClimateEmergency" = "#ClimateEmergency",
+                  "COVID-19" = "Trafford AND coronavirus OR #coronavirus OR #CoronavirusOutbreak OR COVID19 OR COVID-19 OR #COVID19 OR #COVIDー19 OR #Corvid19uk"))
 actionButton("submit", "Submit query", 
     style = "color: #fff; background-color: #969696; border-color: #737373")
 ```
