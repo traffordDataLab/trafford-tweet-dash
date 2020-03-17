@@ -12,7 +12,7 @@ output:
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.10.1/css/all.css" crossorigin="anonymous">
 
 ```{r setup, include=FALSE}
-library(shiny) ; library(flexdashboard) ; library(tidyverse) ; library(rtweet) ; library(tidytext) ; library(reshape2) ; library(igraph) ; library(grid) ; library(ggraph) ; library(lubridate) ; library(DT) ; library(htmltools) ; library(scales) ; library(emo) ; library(knitr) ; library(kableExtra) ; library(shinycssloaders) 
+library(shiny) ; library(flexdashboard) ; library(tidyverse) ; library(rtweet) ; library(tidytext) ; library(reshape2) ; library(igraph) ; library(grid) ; library(ggraph) ; library(lubridate) ; library(DT) ; library(htmltools) ; library(scales) ; library(emo) ; library(knitr) ; library(kableExtra)
 
 twitter_token <- readRDS("twitter_token.rds")
 ```
@@ -23,12 +23,13 @@ tweets <- eventReactive(input$submit,{
       return()
     }
     
-    search_tweets(q = input$query, 
+    results <- search_tweets(q = input$query, 
                   n = 250,
                   include_rts = FALSE,
                   `-filter` = "replies",
                   lang = "en",
                   token = twitter_token)
+    filter(results, !screen_name %in% c("TraffordCouncil", "OneTrafford", "TPAction"))
   })
 
 words <- reactive({
@@ -57,7 +58,8 @@ Sidebar {.sidebar}
 radioButtons("query", label = h5("Choose a topic:"),
                 c("Trafford Council" = "@TraffordCouncil OR \"Trafford Council\"",
                   "OneTrafford" = "@OneTrafford OR \"One Trafford\"",
-                  "#ClimateEmergency"))
+                  "#ClimateEmergency",
+                  "COVID-19" = "Trafford AND #coronavirus OR #COVID19 OR #COVIDー19 OR #CoronavirusOutbreak"))
 actionButton("submit", "Submit query", 
     style = "color: #fff; background-color: #969696; border-color: #737373")
 ```
@@ -65,7 +67,7 @@ actionButton("submit", "Submit query",
 <br />
 
 ```{r, period}
-withSpinner(uiOutput("message"))
+uiOutput("message")
 
 output$message <- renderUI({
   message()
@@ -307,4 +309,6 @@ output$network <- renderPlot({
 About {data-icon="fa-info-circle"}
 =====================================
 
-This dashboard was built by [Trafford Data Lab](https://www.trafforddatalab.io/) using the [rtweet](https://cran.r-project.org/web/packages/rtweet) [R](https://www.r-project.org/) package to retrieve tweets and [tidytext](https://cran.r-project.org/web/packages/tidytext) to tokenise them for analysis.   
+```{r}
+includeMarkdown("about.md")
+```
