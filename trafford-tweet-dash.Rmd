@@ -24,12 +24,12 @@ tweets <- eventReactive(input$submit,{
     }
     
     results <- search_tweets(q = input$query, 
-                  n = 250,
+                  n = 500,
                   include_rts = FALSE,
                   `-filter` = "replies",
                   lang = "en",
                   token = twitter_token)
-    filter(results, !screen_name %in% c("TraffordCouncil", "OneTrafford", "TPAction"))
+    filter(results, !screen_name %in% c("TraffordCouncil", "OneTrafford", "TPAction", "AndrewHWestern", "Saratodd16"))
   })
 
 words <- reactive({
@@ -58,8 +58,8 @@ Sidebar {.sidebar}
 radioButtons("query", label = h5("Choose a topic:"),
                 c("Trafford Council" = "@TraffordCouncil OR \"Trafford Council\"",
                   "OneTrafford" = "@OneTrafford OR \"One Trafford\"",
-                  "#ClimateEmergency" = "#ClimateEmergency",
-                  "COVID-19" = "Trafford AND coronavirus OR #coronavirus OR #CoronavirusOutbreak OR COVID19 OR COVID-19 OR #COVID19 OR #COVIDー19 OR #Corvid19uk"))
+                  "#ClimateEmergency",
+                  "COVID-19" = "Trafford OR \"Old Trafford\" OR \"Trafford Park\" OR \"Gorse Hill\" OR Firswood OR Davyhulme OR Flixton OR Stretford OR Urmston OR \"Sale Moor\" OR \"Ashton upon Mersey\" OR Partington OR Broadheath OR Timperley OR Altrincham OR \"Hale Barns\" OR Bowdon AND coronavirus OR #coronavirus OR #CoronavirusOutbreak OR COVID19 OR COVID-19 OR #COVID19 OR #COVIDー19 OR #Corvid19uk"))
 actionButton("submit", "Submit query", 
     style = "color: #fff; background-color: #969696; border-color: #737373")
 ```
