@@ -12,7 +12,7 @@ output:
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.10.1/css/all.css" crossorigin="anonymous">
 
 ```{r setup, include=FALSE}
-library(shiny) ; library(flexdashboard) ; library(tidyverse) ; library(rtweet) ; library(tidytext) ; library(reshape2) ; library(igraph) ; library(grid) ; library(ggraph) ; library(lubridate) ; library(DT) ; library(htmltools) ; library(scales) ; library(emo) ; library(knitr) ; library(kableExtra)
+library(shiny) ; library(flexdashboard) ; library(tidyverse) ; library(rtweet) ; library(tidytext) ; library(reshape2) ; library(igraph) ; library(grid) ; library(ggraph) ; library(lubridate) ; library(reactable) ; library(htmltools) ; library(scales) ; library(emo) ; library(knitr) ; library(kableExtra)
 
 twitter_token <- readRDS("twitter_token.rds")
 ```
@@ -29,7 +29,7 @@ tweets <- eventReactive(input$submit,{
                   `-filter` = "replies",
                   lang = "en",
                   token = twitter_token)
-    filter(results, !screen_name %in% c("TraffordCouncil", "OneTrafford", "TPAction", "AndrewHWestern", "Saratodd16"))
+    filter(results, !screen_name %in% c("TraffordCouncil", "OneTrafford", "TPAction", "STARProcurement", "AndrewHWestern", "Saratodd16"))
   })
 
 words <- reactive({
@@ -58,8 +58,9 @@ Sidebar {.sidebar}
 radioButtons("query", label = h5("Choose a topic:"),
                 c("Trafford Council" = "@TraffordCouncil OR \"Trafford Council\"",
                   "OneTrafford" = "@OneTrafford OR \"One Trafford\"",
-                  "#ClimateEmergency",
-                  "COVID-19" = "Trafford OR \"Old Trafford\" OR \"Trafford Park\" OR \"Gorse Hill\" OR Firswood OR Davyhulme OR Flixton OR Stretford OR Urmston OR \"Sale Moor\" OR \"Ashton upon Mersey\" OR Partington OR Broadheath OR Timperley OR Altrincham OR \"Hale Barns\" OR Bowdon AND coronavirus OR #coronavirus OR #CoronavirusOutbreak OR COVID19 OR COVID-19 OR #COVID19 OR #COVIDー19 OR #Corvid19uk"))
+                  "#ClimateEmergency" = "#ClimateEmergency AND Trafford",
+                  "COVID-19" = "Trafford OR \"Old Trafford\" OR \"Trafford Park\" OR \"Gorse Hill\" OR Firswood OR Davyhulme OR Flixton OR Stretford OR Urmston OR \"Sale Moor\" OR \"Ashton upon Mersey\" OR Partington OR Broadheath OR Timperley OR Altrincham OR \"Hale Barns\" OR Bowdon AND coronavirus OR #coronavirus OR #CoronavirusOutbreak OR COVID19 OR COVID-19 OR #COVID19 OR #COVIDー19 OR #Corvid19uk",
+                  "#ENDCHILDFOODPOVERTY" = "#ENDCHILDFOODPOVERTY AND Trafford"))
 actionButton("submit", "Submit query", 
     style = "color: #fff; background-color: #969696; border-color: #737373")
 ```
@@ -78,7 +79,7 @@ Tweets {data-icon="fab fa-twitter"}
 =======================================================================
 
 ```{r table}
-DTOutput("table")
+reactableOutput("table")
 
 mention_url <- function(x) {
   x %>%
@@ -96,9 +97,9 @@ hashtag_url <- function(x) {
     stringr::str_c(collapse = " ")
 }
 
-output$table <- renderDT({
-    tweets() %>%
-    select(created_at, screen_name, text, hashtags, mentions_screen_name, urls_expanded_url, urls_t.co, retweet_count, favorite_count) %>% 
+output$table <- renderReactable({
+    table_df <- tweets() %>%
+      select(created_at, screen_name, text, hashtags, mentions_screen_name, urls_expanded_url, urls_t.co, retweet_count, favorite_count) %>% 
       mutate(created_at = strftime(created_at, '%F %T', tz = 'GMT'),
              screen_name = paste0("<a href='https://twitter.com/", screen_name, "' target='_blank'>@", screen_name, "</a>"),
              hashtags = ifelse(
@@ -110,23 +111,25 @@ output$table <- renderDT({
                map_chr(mentions_screen_name, mention_url),
                ""),
              urls_expanded_url = ifelse(is.na(urls_expanded_url), "", paste0("<a href='", urls_expanded_url, "'target='_blank'>", urls_t.co, "</a>"))) %>%
-    select(-urls_t.co) %>% 
-      datatable(
-        fillContainer = TRUE,
-        width = "100%", 
-        rownames = FALSE, 
-        escape = FALSE,
-        options = list(
-          search = list(regex = TRUE),
-          searchHighlight = TRUE,
-          scrollX = TRUE, 
-          autoWidth = TRUE,
-          columnDefs = list(
-            list(className = 'dt-left', targets = "_all"))
-          ), 
-        colnames = c("Timestamp", "Handle", "Tweet", "Hashtags", "Mentions", "URL", "RTs", "Likes")
-      )
-  })
+    select(-urls_t.co) 
+    
+    reactable(table_df,
+              paginationType = "simple",
+              searchable = TRUE,
+              defaultSorted = "created_at",
+              defaultSortOrder = "desc",
+              columns = list(
+                created_at = colDef(name = "Timestamp"),
+                screen_name = colDef(name = "Handle", html = TRUE),
+                text = colDef(name = "Tweet"),
+                hashtags = colDef(name = "Hashtags", html = TRUE),
+                mentions_screen_name = colDef(name = "Mentions", html = TRUE),
+                urls_expanded_url = colDef(name = "URL", html = TRUE),
+                retweet_count = colDef(name = "RTs"),
+                favorite_count = colDef(name = "Likes")
+                )
+              )
+    })
 ```
 
 Charts {data-icon="fas fa-chart-bar"}
